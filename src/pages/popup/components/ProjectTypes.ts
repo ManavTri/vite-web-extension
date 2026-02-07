@@ -2,6 +2,7 @@ export type Project = {
   id: string;
   name: string;
   description: string;
+  lastUpdated: string;
   techStack: string[];
   userStories: string[];
 };

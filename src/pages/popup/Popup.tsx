@@ -6,12 +6,26 @@ import ProjectHeader from "./components/ProjectHeader";
 import ProjectList from "./components/ProjectList";
 import type { Project, ProjectFormValues } from "./components/ProjectTypes";
 
+const formatTimestamp = (date: Date) => {
+  const pad = (value: number) => value.toString().padStart(2, "0");
+  const hours = date.getHours();
+  const period = hours >= 12 ? "PM" : "AM";
+  const displayHours = hours % 12 || 12;
+  const month = pad(date.getMonth() + 1);
+  const day = pad(date.getDate());
+  const year = date.getFullYear().toString().slice(-2);
+  const minutes = pad(date.getMinutes());
+
+  return `${month}-${day}-${year} ${displayHours}:${minutes} ${period}`;
+};
+
 const initialProjects: Project[] = [
   {
     id: "project-pal",
     name: "Project Pal",
     description:
       "Browser extension that helps teams track projects, capture context, and surface next steps during daily work.",
+    lastUpdated: formatTimestamp(new Date()),
     techStack: ["React", "TypeScript", "Vite", "Tailwind"],
     userStories: [
       "As a user, I can create a new workspace in one click.",
@@ -23,6 +37,7 @@ const initialProjects: Project[] = [
     name: "Impact Hub",
     description:
       "Internal platform that centralizes portfolio projects, timelines, and outcomes to help leadership make faster decisions.",
+    lastUpdated: formatTimestamp(new Date()),
     techStack: ["Svelte", "Node.js", "Postgres"],
     userStories: [
       "As a team lead, I can assign tasks from a project board.",
@@ -34,6 +49,7 @@ const initialProjects: Project[] = [
     name: "StoryCraft",
     description:
       "Program storytelling toolkit that turns qualitative feedback into shareable narratives and reports.",
+    lastUpdated: formatTimestamp(new Date()),
     techStack: ["Vue", "Pinia", "Firebase"],
     userStories: [
       "As a user, I can invite teammates via email.",
@@ -148,6 +164,7 @@ export default function Popup() {
         id: `project-${Date.now().toString(36)}`,
         name: trimmedName,
         description: trimmedDescription,
+        lastUpdated: formatTimestamp(new Date()),
         techStack,
         userStories,
       };
@@ -161,6 +178,7 @@ export default function Popup() {
                 ...project,
                 name: trimmedName,
                 description: trimmedDescription,
+                lastUpdated: formatTimestamp(new Date()),
                 techStack,
                 userStories,
               }
@@ -247,6 +265,7 @@ export default function Popup() {
           project.id === activeProject.id
             ? {
                 ...project,
+                lastUpdated: formatTimestamp(new Date()),
                 userStories: project.userStories.includes(trimmedStory)
                   ? project.userStories
                   : [...project.userStories, trimmedStory]
@@ -269,6 +288,7 @@ export default function Popup() {
         <ProjectHeader
           onAdd={openCreateForm}
           showAdd={!activeProject && !isFormOpen}
+          showSearch={!activeProject && !isFormOpen}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           onSearchSubmit={() => setSearchQuery((prev) => prev.trim())}

@@ -1,6 +1,7 @@
 type ProjectHeaderProps = {
   onAdd: () => void;
   showAdd?: boolean;
+  showSearch?: boolean;
   searchQuery: string;
   onSearchChange: (value: string) => void;
   onSearchSubmit: () => void;
@@ -9,6 +10,7 @@ type ProjectHeaderProps = {
 export default function ProjectHeader({
   onAdd,
   showAdd = true,
+  showSearch = true,
   searchQuery,
   onSearchChange,
   onSearchSubmit,
@@ -31,20 +33,22 @@ export default function ProjectHeader({
           </button>
         )}
       </div>
-      <div className="flex items-center gap-2">
-        <input
-          className="w-full rounded-xl border border-gray-800 bg-gray-950/60 px-3 py-2 text-sm text-gray-100 placeholder:text-gray-500"
-          value={searchQuery}
-          onChange={(event) => onSearchChange(event.target.value)}
-          placeholder="Search projects"
-        />
-        <button
-          className="rounded-xl border border-gray-700 px-3 py-2 text-sm text-gray-300 transition hover:border-gray-500 hover:text-white"
-          onClick={onSearchSubmit}
-        >
-          Search
-        </button>
-      </div>
+      {showSearch && (
+        <div className="flex items-center gap-2">
+          <input
+            className="w-full rounded-xl border border-gray-800 bg-gray-950/60 px-3 py-2 text-sm text-gray-100 placeholder:text-gray-500"
+            value={searchQuery}
+            onChange={(event) => onSearchChange(event.target.value)}
+            placeholder="Search projects"
+          />
+          <button
+            className="rounded-xl border border-gray-700 px-3 py-2 text-sm text-gray-300 transition hover:border-gray-500 hover:text-white"
+            onClick={onSearchSubmit}
+          >
+            Search
+          </button>
+        </div>
+      )}
     </div>
   );
 }

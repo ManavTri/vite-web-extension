@@ -15,6 +15,9 @@ export default function ProjectList({ projects, onOpen, onEdit, onDelete }: Proj
           <div>
             <h2 className="text-lg font-semibold text-gray-100 break-words">{project.name}</h2>
             <p className="mt-1 text-sm text-gray-300 break-words">{project.description}</p>
+            <p className="mt-2 text-xs uppercase tracking-wider text-gray-500">
+              Last updated: {project.lastUpdated}
+            </p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <button
                 className="rounded-lg border border-gray-700 px-2 py-1 text-xs text-gray-300 transition hover:border-gray-500 hover:text-white"
