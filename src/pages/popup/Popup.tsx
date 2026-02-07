@@ -80,6 +80,21 @@ const parseLineList = (value: string) =>
 
 const STORAGE_KEY = "project-pal:data";
 
+const extractJson = (value: string) => {
+  const fencedMatch = value.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  if (fencedMatch?.[1]) {
+    return fencedMatch[1].trim();
+  }
+
+  const firstBrace = value.indexOf("{");
+  const lastBrace = value.lastIndexOf("}");
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    return value.slice(firstBrace, lastBrace + 1).trim();
+  }
+
+  return value.trim();
+};
+
 export default function Popup() {
   const [projectList, setProjectList] = useState<Project[]>(initialProjects);
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
@@ -93,6 +108,18 @@ export default function Popup() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isAiFormMode, setIsAiFormMode] = useState(false);
+  const [aiSummary, setAiSummary] = useState("");
+  const [aiOptions, setAiOptions] = useState<
+    Array<{
+      name: string;
+      description: string;
+      techStack: string[];
+      userStories: string[];
+    }>
+  >([]);
+  const [isGeneratingOptions, setIsGeneratingOptions] = useState(false);
+  const [aiOptionsError, setAiOptionsError] = useState<string | null>(null);
 
   const activeProject = useMemo(
     () => projectList.find((project) => project.id === activeProjectId) ?? null,
@@ -136,6 +163,15 @@ export default function Popup() {
   }, [activeProjectId]);
 
   useEffect(() => {
+    if (!isFormOpen) {
+      setIsAiFormMode(false);
+      setAiSummary("");
+      setAiOptions([]);
+      setAiOptionsError(null);
+    }
+  }, [isFormOpen]);
+
+  useEffect(() => {
     const payload = JSON.stringify({
       projects: projectList,
       aiFeedbackByProjectId,
@@ -152,6 +188,10 @@ export default function Popup() {
     setFormMode("create");
     setFormValues(emptyFormValues);
     setIsFormOpen(true);
+    setIsAiFormMode(false);
+    setAiSummary("");
+    setAiOptions([]);
+    setAiOptionsError(null);
   };
 
   const openEditForm = (project: Project) => {
@@ -221,6 +261,119 @@ export default function Popup() {
     }
 
     setIsFormOpen(false);
+  };
+
+  const handleGenerateProjectOptions = async () => {
+    const trimmedSummary = aiSummary.trim();
+    if (!trimmedSummary || isGeneratingOptions) {
+      return;
+    }
+
+    const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY as string | undefined;
+    if (!apiKey) {
+      setAiOptionsError("Missing OpenRouter API key. Set VITE_OPENROUTER_API_KEY in your env.");
+      return;
+    }
+
+    setIsGeneratingOptions(true);
+    setAiOptionsError(null);
+
+    const prompt = [
+      "You are a senior product strategist.",
+      "Given the summary below, propose 3 project options.",
+      "Each option must include:",
+      "- name",
+      "- description (1 sentence)",
+      "- techStack (3-6 items)",
+      "- userStories (2-3 bullets)",
+      "Return JSON ONLY in this exact shape:",
+      "{",
+      "  \"options\": [",
+      "    { \"name\": \"...\", \"description\": \"...\", \"techStack\": [\"...\"], \"userStories\": [\"...\"] }",
+      "  ]",
+      "}",
+      "Summary:",
+      trimmedSummary,
+    ].join("\n");
+
+    try {
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "http://localhost",
+          "X-Title": "Project Pal",
+        },
+        body: JSON.stringify({
+          model: "openai/gpt-4o",
+          messages: [
+            {
+              role: "system",
+              content: "You produce concise, structured project options for PMs."
+            },
+            { role: "user", content: prompt }
+          ],
+          temperature: 0.3,
+          max_tokens: 600
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`OpenRouter error: ${response.status}`);
+      }
+
+      const data = (await response.json()) as {
+        choices?: Array<{ message?: { content?: string } }>;
+      };
+      const content = data.choices?.[0]?.message?.content?.trim();
+      if (!content) {
+        throw new Error("OpenRouter returned an empty response.");
+      }
+
+      const parsed = JSON.parse(extractJson(content)) as {
+        options?: Array<{
+          name: string;
+          description: string;
+          techStack: string[];
+          userStories: string[];
+        }>;
+      };
+
+      if (!parsed.options || parsed.options.length === 0) {
+        throw new Error("No options returned by AI.");
+      }
+
+      setAiOptions(parsed.options.slice(0, 3));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      setAiOptionsError(message);
+    } finally {
+      setIsGeneratingOptions(false);
+    }
+  };
+
+  const handleSelectProjectOption = (option: {
+    name: string;
+    description: string;
+    techStack: string[];
+    userStories: string[];
+  }) => {
+    const newProject: Project = {
+      id: `project-${Date.now().toString(36)}`,
+      name: option.name.trim() || "New Project",
+      description: option.description.trim(),
+      lastUpdated: formatTimestamp(new Date()),
+      techStack: option.techStack.map((item) => item.trim()).filter(Boolean),
+      userStories: option.userStories.map((item) => item.trim()).filter(Boolean),
+    };
+
+    setProjectList((prev) => [newProject, ...prev]);
+    setActiveProjectId(newProject.id);
+    setIsFormOpen(false);
+    setIsAiFormMode(false);
+    setAiSummary("");
+    setAiOptions([]);
   };
 
   const handleGenerateStoryFeedback = async () => {
@@ -340,9 +493,18 @@ export default function Popup() {
             <ProjectForm
               formMode={formMode}
               formValues={formValues}
+              aiMode={isAiFormMode}
+              aiSummary={aiSummary}
+              aiOptions={aiOptions}
+              isGeneratingOptions={isGeneratingOptions}
+              aiError={aiOptionsError}
               onClose={() => setIsFormOpen(false)}
               onSave={handleSave}
               onFieldChange={updateFormField}
+              onToggleAiMode={() => setIsAiFormMode((prev) => !prev)}
+              onAiSummaryChange={setAiSummary}
+              onGenerateOptions={handleGenerateProjectOptions}
+              onSelectOption={handleSelectProjectOption}
             />
           ) : activeProject ? (
             <ProjectDetail
