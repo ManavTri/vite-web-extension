@@ -1,17 +1,16 @@
 {
   "action": {
-    "default_icon": "public/dev-icon-32.png",
+    "default_icon": "public/project logo.svg",
     "default_popup": "src/pages/popup/index.html"
   },
   "icons": {
-    "128": "public/dev-icon-128.png"
+    "128": "public/project logo.svg"
   },
   "web_accessible_resources": [
     {
       "resources": [
         "contentStyle.css",
-        "dev-icon-128.png",
-        "dev-icon-32.png"
+        "project logo.svg"
       ],
       "matches": []
     }
