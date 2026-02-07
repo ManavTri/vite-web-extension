@@ -8,6 +8,9 @@ type ProjectDetailProps = {
   isGenerating: boolean;
   aiError: string | null;
   aiFeedbackByStory: Record<string, string>;
+  isGeneratingRisk: boolean;
+  riskError: string | null;
+  onGenerateRisk: () => void;
   onBack: () => void;
   onEdit: (project: Project) => void;
   onDelete: (projectId: string) => void;
@@ -21,6 +24,9 @@ export default function ProjectDetail({
   isGenerating,
   aiError,
   aiFeedbackByStory,
+  isGeneratingRisk,
+  riskError,
+  onGenerateRisk,
   onBack,
   onEdit,
   onDelete,
@@ -28,6 +34,7 @@ export default function ProjectDetail({
   onGenerateFeedback,
 }: ProjectDetailProps) {
   const [expandedStory, setExpandedStory] = useState<string | null>(null);
+  const [isBreakdownOpen, setIsBreakdownOpen] = useState(false);
 
   const normalizeStoryKey = (value: string) => value.trim();
 
@@ -174,6 +181,53 @@ export default function ProjectDetail({
             </span>
           ))}
         </div>
+      </div>
+
+      <div className="rounded-2xl border border-gray-800 bg-gray-950/40 p-3">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-300">Risk & Readiness</h3>
+            <p className="mt-2 text-sm text-gray-200">
+              Risk: {project.riskScore ?? "-"} / 100
+            </p>
+            <p className="text-sm text-gray-200">
+              Readiness: {project.readinessScore ?? "-"} / 100
+            </p>
+          </div>
+          <button
+            className="rounded-xl border border-gray-700 px-3 py-1 text-xs text-gray-300 transition hover:border-gray-500 hover:text-white"
+            onClick={onGenerateRisk}
+            disabled={isGeneratingRisk}
+          >
+            {isGeneratingRisk ? "Scoring..." : "Generate"}
+          </button>
+        </div>
+        {riskError && <p className="mt-2 text-xs text-rose-300">{riskError}</p>}
+        {project.riskBreakdown && project.riskBreakdown.length > 0 && (
+          <div className="mt-3">
+            <button
+              className="text-xs uppercase tracking-wider text-gray-400 transition hover:text-gray-200"
+              onClick={() => setIsBreakdownOpen((prev) => !prev)}
+            >
+              {isBreakdownOpen ? "Hide Breakdown" : "Show Breakdown"}
+            </button>
+            {isBreakdownOpen && (
+              <div className="mt-3 space-y-2 text-sm text-gray-200">
+                {project.riskBreakdown.map((item) => (
+                  <div key={item.dimension} className="rounded-xl border border-gray-800 bg-gray-950/60 p-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-gray-300">
+                        {item.dimension}
+                      </p>
+                      <span className="text-xs text-gray-400">{item.score}</span>
+                    </div>
+                    <p className="mt-2 text-sm text-gray-200">{item.why}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="rounded-2xl border border-gray-800 bg-gray-950/40 p-3">

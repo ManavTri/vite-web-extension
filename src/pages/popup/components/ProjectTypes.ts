@@ -4,6 +4,13 @@ export type Project = {
   description: string;
   nextDeadline: string;
   lastUpdated: string;
+  riskScore?: number;
+  readinessScore?: number;
+  riskBreakdown?: Array<{
+    dimension: string;
+    score: number;
+    why: string;
+  }>;
   techStack: string[];
   userStories: string[];
 };

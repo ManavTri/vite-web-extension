@@ -125,6 +125,8 @@ export default function Popup() {
   >([]);
   const [isGeneratingOptions, setIsGeneratingOptions] = useState(false);
   const [aiOptionsError, setAiOptionsError] = useState<string | null>(null);
+  const [isGeneratingRisk, setIsGeneratingRisk] = useState(false);
+  const [riskError, setRiskError] = useState<string | null>(null);
 
   const activeProject = useMemo(
     () => projectList.find((project) => project.id === activeProjectId) ?? null,
@@ -165,6 +167,7 @@ export default function Popup() {
   useEffect(() => {
     setStoryDraft("");
     setAiError(null);
+    setRiskError(null);
   }, [activeProjectId]);
 
   useEffect(() => {
@@ -489,6 +492,105 @@ export default function Popup() {
     }
   };
 
+  const handleGenerateRiskAssessment = async () => {
+    if (!activeProject || isGeneratingRisk) {
+      return;
+    }
+
+    const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY as string | undefined;
+    if (!apiKey) {
+      setRiskError("Missing OpenRouter API key. Set VITE_OPENROUTER_API_KEY in your env.");
+      return;
+    }
+
+    setIsGeneratingRisk(true);
+    setRiskError(null);
+
+    const prompt = [
+      "You are a product ops advisor.",
+      "Evaluate risk and readiness using the project title, description, and user stories.",
+      "Return JSON ONLY in this exact shape:",
+      "{",
+      "  \"riskScore\": 0,",
+      "  \"readinessScore\": 0,",
+      "  \"breakdown\": [",
+      "    { \"dimension\": \"Clarity\", \"score\": 0, \"why\": \"...\" }",
+      "  ]",
+      "}",
+      "Use 0-100 scores. Include exactly these dimensions in breakdown:",
+      "Clarity, Scope Control, Testability, Dependencies, Alignment",
+      "",
+      `Title: ${activeProject.name}`,
+      `Description: ${activeProject.description}`,
+      `User Stories: ${activeProject.userStories.join(" | ") || "N/A"}`,
+    ].join("\n");
+
+    try {
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "http://localhost",
+          "X-Title": "Project Pal",
+        },
+        body: JSON.stringify({
+          model: "openai/gpt-4o",
+          messages: [
+            {
+              role: "system",
+              content: "You output concise scoring and reasons in JSON only."
+            },
+            { role: "user", content: prompt }
+          ],
+          temperature: 0.2,
+          max_tokens: 400
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`OpenRouter error: ${response.status}`);
+      }
+
+      const data = (await response.json()) as {
+        choices?: Array<{ message?: { content?: string } }>;
+      };
+      const content = data.choices?.[0]?.message?.content?.trim();
+      if (!content) {
+        throw new Error("OpenRouter returned an empty response.");
+      }
+
+      const parsed = JSON.parse(extractJson(content)) as {
+        riskScore: number;
+        readinessScore: number;
+        breakdown: Array<{ dimension: string; score: number; why: string }>;
+      };
+
+      if (!parsed.breakdown || parsed.breakdown.length === 0) {
+        throw new Error("No breakdown returned by AI.");
+      }
+
+      setProjectList((prev) =>
+        prev.map((project) =>
+          project.id === activeProject.id
+            ? {
+                ...project,
+                riskScore: parsed.riskScore,
+                readinessScore: parsed.readinessScore,
+                riskBreakdown: parsed.breakdown,
+                lastUpdated: formatTimestamp(new Date()),
+              }
+            : project
+        )
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      setRiskError(message);
+    } finally {
+      setIsGeneratingRisk(false);
+    }
+  };
+
   return (
     <div className="w-[460px] max-w-full bg-gray-900 p-3 text-gray-100">
       <div className="rounded-3xl border border-gray-800 bg-gray-950/70 p-3 shadow-lg">
@@ -526,6 +628,9 @@ export default function Popup() {
               isGenerating={isGenerating}
               aiError={aiError}
               aiFeedbackByStory={aiFeedbackByProjectId[activeProject.id] ?? {}}
+              isGeneratingRisk={isGeneratingRisk}
+              riskError={riskError}
+              onGenerateRisk={handleGenerateRiskAssessment}
               onBack={() => setActiveProjectId(null)}
               onEdit={openEditForm}
               onDelete={handleDelete}
