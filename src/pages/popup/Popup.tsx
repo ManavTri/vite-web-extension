@@ -3,22 +3,24 @@ import logo from '@assets/img/logo.svg';
 
 export default function Popup() {
   return (
-    <div className="absolute top-0 left-0 right-0 bottom-0 text-center h-full p-3 bg-gray-800">
-      <header className="flex flex-col items-center justify-center text-white">
-        <img src={logo} className="h-36 pointer-events-none animate-spin-slow" alt="logo" />
-        <p>
-          Edit <code>src/pages/popup/Popup.jsx</code> and save to reload.
-        </p>
-        <a
-          className="text-blue-400"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React!
-        </a>
-        <p>Popup styled with TailwindCSS!</p>
-      </header>
+    <div className="bg-gray-800 p-4 text-gray-100">
+      {/* Title */}
+      <h1 className="text-center text-3xl font-semibold tracking-wide">Project Pal</h1>
+      {/* List of project */}
+      <div className="mt-4 flex flex-col gap-3">
+        <button className="flex h-14 w-full items-center justify-center rounded-2xl border border-gray-700 bg-gray-100 text-base font-medium text-gray-900 transition hover:bg-gray-200 hover:shadow-sm cursor-pointer">
+          Project 1
+        </button>
+        <button className="flex h-14 w-full items-center justify-center rounded-2xl border border-gray-700 bg-gray-100 text-base font-medium text-gray-900 transition hover:bg-gray-200 hover:shadow-sm cursor-pointer">
+          Project 2
+        </button>
+        <button className="flex h-14 w-full items-center justify-center rounded-2xl border border-gray-700 bg-gray-100 text-base font-medium text-gray-900 transition hover:bg-gray-200 hover:shadow-sm cursor-pointer">
+          Project 3
+        </button>
+        <button className="flex h-14 w-full items-center justify-center rounded-2xl border-2 border-dashed border-gray-500 text-base font-semibold text-gray-200 transition hover:border-gray-300 hover:text-white hover:bg-gray-700 cursor-pointer">
+          +
+        </button>
+      </div>
     </div>
   );
 }
